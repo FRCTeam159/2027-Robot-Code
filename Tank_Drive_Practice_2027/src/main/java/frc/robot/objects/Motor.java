@@ -8,9 +8,13 @@ import com.revrobotics.ResetMode;
 import com.revrobotics.spark.SparkLimitSwitch;
 import com.revrobotics.spark.SparkLowLevel.MotorType;
 import com.revrobotics.spark.SparkMax;
+import com.revrobotics.sim.SparkRelativeEncoderSim;
+import com.revrobotics.sim.SparkMaxSim;
 import com.revrobotics.spark.config.LimitSwitchConfig;
 import com.revrobotics.spark.config.SparkBaseConfig.IdleMode;
 import com.revrobotics.spark.config.SparkMaxConfig;
+import org.wpilib.framework.RobotBase;
+import org.wpilib.math.system.DCMotor;
 
 public class Motor {
 
@@ -20,6 +24,8 @@ public class Motor {
     boolean lowerLimitNormalyClosed = false;
     SparkMax rev_motor = null;
     RelativeEncoder rev_encoder;
+    private final SparkRelativeEncoderSim sim_encoder;
+    private final SparkMaxSim sim_motor;
     int m_chnl;
     boolean m_inverted = false;
     boolean m_enabled = true;
@@ -30,12 +36,18 @@ public class Motor {
    public Motor(int id, boolean isBrushed) {
         rev_motor = new SparkMax(CAN_PORT, id, isBrushed ? MotorType.kBrushed : MotorType.kBrushless);
         rev_encoder = rev_motor.getEncoder();
+        sim_encoder = RobotBase.isSimulation() ? new SparkRelativeEncoderSim(rev_motor) : null;
+        sim_motor = RobotBase.isSimulation()
+            ? new SparkMaxSim(rev_motor, isBrushed ? DCMotor.getCIM(1) : DCMotor.getNEO(1))
+            : null;
         m_chnl = id;
     }
 
     public Motor(int id) {
         rev_motor = new SparkMax(CAN_PORT, id, MotorType.kBrushless);
         rev_encoder = rev_motor.getEncoder();
+        sim_encoder = RobotBase.isSimulation() ? new SparkRelativeEncoderSim(rev_motor) : null;
+        sim_motor = RobotBase.isSimulation() ? new SparkMaxSim(rev_motor, DCMotor.getNEO(1)) : null;
         m_chnl = id;
     }
 
@@ -135,6 +147,26 @@ public class Motor {
 
     public void set(double speed) {
         rev_motor.setThrottle(speed);
+    }
+
+    public void updateSimState(double positionRotations, double velocityRpm,
+            double busVoltage, double deltaSeconds) {
+        if (sim_motor != null) {
+            // This publishes SPARK output/current/voltage state and applies Driver Station enable.
+            sim_motor.iterate(velocityRpm, busVoltage, deltaSeconds);
+        }
+        if (sim_encoder != null) {
+            sim_encoder.setPosition(positionRotations);
+            sim_encoder.setVelocity(velocityRpm);
+        }
+    }
+
+    public double getSimAppliedOutput() {
+        return sim_motor == null ? 0.0 : sim_motor.getAppliedOutput();
+    }
+
+    public double getSimSetpoint() {
+        return sim_motor == null ? 0.0 : sim_motor.getSetpoint();
     }
 
     public void setVoltage(double v) {

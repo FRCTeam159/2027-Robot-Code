@@ -2,6 +2,7 @@ package frc.robot.commands;
 
 import org.wpilib.driverstation.XboxController;
 import org.wpilib.command2.Command;
+import org.wpilib.telemetry.Telemetry;
 import frc.robot.subsystems.Drivetrain;
 
 public class DriveWithGamepad extends Command {
@@ -30,10 +31,15 @@ public class DriveWithGamepad extends Command {
         double turn_speed = controller.getRightX();
 
         drivetrain.drive(drive_speed, turn_speed);
+
+        var telemetry = Telemetry.getTable("DriveDebug");
+        telemetry.log("controllerLeftY", drive_speed);
+        telemetry.log("controllerRightX", turn_speed);
     }
 
     @Override
     public void end(boolean interrupted) {
+        drivetrain.drive(0, 0);
         System.out.println("DriveWithGamepad cancelled");
     }
 

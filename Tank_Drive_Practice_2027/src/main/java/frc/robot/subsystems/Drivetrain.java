@@ -28,6 +28,7 @@ public class Drivetrain extends SubsystemBase {
     private final Field2d field = new Field2d();
     private double left_command;
     private double right_command;
+    private long simulationHeartbeat;
 
     double drive_scale = 1;
     double turn_scale = 1;
@@ -106,6 +107,15 @@ public class Drivetrain extends SubsystemBase {
         debugTelemetry.log("rightSparkOutput", right_lead_motor.getSimAppliedOutput());
         debugTelemetry.log("leftPoseMeters", drivetrain_sim.getPose().getX());
         debugTelemetry.log("yPoseMeters", drivetrain_sim.getPose().getY());
+
+        // A changing signal makes it easy to verify Elastic's localhost connection
+        // without moving the gamepad or relying on motor telemetry.
+        double simulationSeconds = ++simulationHeartbeat * sim_loop_period_seconds;
+        var elasticTestTelemetry = Telemetry.getTable("ElasticTest");
+        elasticTestTelemetry.log("connected", true);
+        elasticTestTelemetry.log("heartbeat", simulationHeartbeat);
+        elasticTestTelemetry.log("simulationSeconds", simulationSeconds);
+        elasticTestTelemetry.log("testWave", Math.sin(simulationSeconds * 2.0));
     }
 
 }
